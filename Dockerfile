@@ -1,0 +1,19 @@
+FROM alpine:3.22 AS base
+RUN apk add --no-cache ca-certificates \
+    && addgroup -g 10001 zincsearch \
+    && adduser -D -H -h /nonexistent -s /sbin/nologin -u 10001 -G zincsearch zincsearch \
+    && mkdir -p /var/lib/zincsearch /data \
+    && chown zincsearch:zincsearch /var/lib/zincsearch /data
+
+FROM scratch
+ARG TARGETPLATFORM
+COPY --from=base /etc/passwd /etc/passwd
+COPY --from=base /etc/group /etc/group
+COPY --from=base /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=base --chown=zincsearch:zincsearch /var/lib/zincsearch /var/lib/zincsearch
+COPY --from=base --chown=zincsearch:zincsearch /data /data
+COPY LICENSE COPYRIGHT /licenses/
+COPY $TARGETPLATFORM/zincsearch /go/bin/zincsearch
+USER zincsearch:zincsearch
+EXPOSE 4080
+ENTRYPOINT ["/go/bin/zincsearch"]
